@@ -1,0 +1,186 @@
+version: '3.9'
+
+services:
+  # -------------------------------------------------
+  # PostgreSQL – Historical and query store
+  # -------------------------------------------------
+  postgres:
+    image: postgres:15-alpine
+    container_name: cyberstream-postgres
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: cyberstream
+      POSTGRES_USER: ${POSTGRES_USER:-cyber}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cyberpw}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backend/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  # -------------------------------------------------
+  # Zookeeper – required by Kafka
+  # -------------------------------------------------
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: cyberstream-zookeeper
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+
+  # -------------------------------------------------
+  # Kafka – Event streaming backbone
+  # -------------------------------------------------
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: cyberstream-kafka
+    restart: unless-stopped
+    depends_on:
+      - zookeeper
+    env_file:
+      - .env
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_LOG_RETENTION_HOURS: 24
+    ports:
+      - "9092:9092"
+
+  # -------------------------------------------------
+  # Hadoop Namenode & Datanode – HDFS storage
+  # -------------------------------------------------
+  hdfs-namenode:
+    image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
+    container_name: cyberstream-hdfs-namenode
+    env_file:
+      - .env
+    environment:
+      CLUSTER_NAME: cyberstream
+    ports:
+      - "9870:9870"
+    volumes:
+      - hdfs-namenode:/hadoop/dfs/name
+    networks:
+      - hdfs
+
+  hdfs-datanode:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+    container_name: cyberstream-hdfs-datanode
+    env_file:
+      - .env
+    environment:
+      CLUSTER_NAME: cyberstream
+    volumes:
+      - hdfs-datanode:/hadoop/dfs/data
+    depends_on:
+      - hdfs-namenode
+    networks:
+      - hdfs
+
+  # -------------------------------------------------
+  # Hive Metastore – SQL‑based metadata for HDFS data
+  # -------------------------------------------------
+  hive-metastore:
+    image: bde2020/hive:2.3.2-postgresql-metastore
+    container_name: cyberstream-hive-metastore
+    env_file:
+      - .env
+    environment:
+      HIVE_METASTORE_DB_HOST: postgres
+      HIVE_METASTORE_DB_NAME: cyberstream
+      HIVE_METASTORE_DB_USER: ${POSTGRES_USER:-cyber}
+      HIVE_METASTORE_DB_PASSWORD: ${POSTGRES_PASSWORD:-cyberpw}
+    ports:
+      - "9083:9083"
+    depends_on:
+      - postgres
+
+  # -------------------------------------------------
+  # Spark Structured Streaming – processing layer
+  # -------------------------------------------------
+  spark:
+    image: bitnami/spark:3.5.0
+    container_name: cyberstream-spark
+    depends_on:
+      - kafka
+      - postgres
+      - hdfs-namenode
+    environment:
+      SPARK_MODE: master
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./spark:/opt/spark-apps
+
+  # -------------------------------------------------
+  # Event Generator – Python service publishing to Kafka
+  # -------------------------------------------------
+  event-generator:
+    build:
+      context: ./event-generator
+      dockerfile: Dockerfile
+    container_name: cyberstream-event-generator
+    depends_on:
+      - kafka
+    env_file:
+      - .env
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    ports:
+      - "8001:8001"
+
+  # -------------------------------------------------
+  # FastAPI Backend – REST + WebSocket API
+  # -------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cyberstream-backend
+    depends_on:
+      - postgres
+      - kafka
+      - spark
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-cyber}:${POSTGRES_PASSWORD:-cyberpw}@postgres:5432/cyberstream
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    ports:
+      - "8000:8000"
+
+  # -------------------------------------------------
+  # React Frontend – Vite dev server
+  # -------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: cyberstream-frontend
+    depends_on:
+      - backend
+    env_file:
+      - .env
+    ports:
+      - "3000:3000"
+    stdin_open: true
+    tty: true
+
+volumes:
+  pgdata:
+  hdfs-namenode:
+  hdfs-datanode:
+
+networks:
+  hdfs:
+    driver: bridge

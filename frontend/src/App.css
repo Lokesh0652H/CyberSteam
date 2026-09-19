@@ -1,0 +1,241 @@
+/* Complete CSS for CyberStream Pages */
+
+/* Layout & Common */
+.page-container {
+  padding: 20px;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.panel {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+}
+
+.dashboard-row {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+.dashboard-row.full-width > .panel {
+  flex: 1;
+}
+.dashboard-row.two-col > .panel {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Dashboard Specific */
+.status-banner {
+  display: flex;
+  align-items: center;
+  background: rgba(0, 255, 0, 0.05);
+  border: 1px solid rgba(0, 255, 0, 0.2);
+  padding: 10px 15px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  gap: 12px;
+}
+.status-banner .live-label {
+  color: #0f0;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+.status-banner .source-indicator {
+  color: var(--text-secondary);
+  font-size: 0.9em;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.stats-grid.mini {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.recent-events-list {
+  max-height: 300px;
+  overflow-y: auto;
+  font-family: monospace;
+  font-size: 0.9em;
+}
+.recent-event-item {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+.recent-event-item:last-child {
+  border-bottom: none;
+}
+
+/* Live Events & Filters */
+.header-controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.btn-control, .btn-primary, .btn-secondary, .btn-danger, .btn-success {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+.btn-primary { background: var(--primary-color); border-color: var(--primary-color); }
+.btn-danger { background: var(--danger-color); border-color: var(--danger-color); }
+.btn-success { background: var(--success-color); border-color: var(--success-color); }
+
+.filters-bar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.filter-input, .filter-select {
+  background: #111;
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 8px 12px;
+  border-radius: 4px;
+}
+
+.paused-indicator {
+  color: var(--warning-color);
+  font-weight: bold;
+  animation: blink 2s infinite;
+}
+@keyframes blink {
+  50% { opacity: 0.5; }
+}
+
+/* IP & Server Analytics */
+.two-col-layout {
+  display: flex;
+  gap: 20px;
+}
+.list-panel {
+  flex: 2;
+}
+.detail-panel {
+  flex: 1;
+}
+.server-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 16px;
+}
+.server-card {
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.server-card:hover, .server-card.active {
+  border-color: var(--primary-color);
+  transform: translateY(-2px);
+}
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+}
+.card-metrics .metric {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  color: var(--text-secondary);
+}
+
+/* Map */
+.dark-popup .leaflet-popup-content-wrapper, 
+.dark-popup .leaflet-popup-tip {
+  background: #1a1a1a;
+  color: #fff;
+  border: 1px solid var(--border-color);
+}
+.geo-popup-content p {
+  margin: 4px 0;
+  font-size: 0.9em;
+}
+
+/* Stat Box (Performance/Metrics) */
+.stat-box {
+  background: rgba(255,255,255,0.02);
+  padding: 16px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+}
+.stat-box .label {
+  color: var(--text-secondary);
+  font-size: 0.9em;
+  margin-bottom: 8px;
+}
+.stat-box .value {
+  font-size: 1.5em;
+  font-weight: 600;
+}
+.stat-box .value.critical {
+  color: var(--danger-color);
+}
+
+/* Modals */
+.modal-backdrop {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.modal {
+  min-width: 400px;
+}
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+/* Utility */
+.mt-3 { margin-top: 12px; }
+.mt-4 { margin-top: 16px; }
+.mb-4 { margin-bottom: 16px; }
+.mr-1 { margin-right: 4px; }
+.mr-2 { margin-right: 8px; }
+.mono { font-family: monospace; }
+.flex-between { display: flex; justify-content: space-between; align-items: center; }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .dashboard-row { flex-direction: column; }
+  .two-col-layout { flex-direction: column; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .filters-bar { flex-direction: column; }
+}
+@media (max-width: 480px) {
+  .stats-grid { grid-template-columns: 1fr; }
+}

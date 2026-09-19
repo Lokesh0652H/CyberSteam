@@ -1,0 +1,4 @@
+pyspark==3.5.0
+kafka-python
+psycopg2-binary
+py4j
