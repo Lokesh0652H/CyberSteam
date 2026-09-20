@@ -20,6 +20,7 @@ import AuditLogPage from './pages/AuditLogPage';
 import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
 import TargetAppDemoPage from './pages/TargetAppDemoPage';
+import AssistantPage from './pages/AssistantPage';
 
 function App() {
   return (
@@ -41,6 +42,7 @@ function App() {
           <Route path="/rules" element={<RulesPage />} />
           <Route path="/audit" element={<AuditLogPage />} />
           <Route path="/reports" element={<ReportsPage />} />
+          <Route path="/assistant" element={<AssistantPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>
 

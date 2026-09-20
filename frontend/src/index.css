@@ -1,3 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@keyframes gradientBg {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.animated-bg {
+  background: linear-gradient(-45deg, #0a0c10, #111620, #0a101d, #06080d);
+  background-size: 400% 400%;
+  animation: gradientBg 15s ease infinite;
+}
+
 /* ========================================
    CYBERSTREAM — Design System
    Dark SOC / Cybersecurity Theme

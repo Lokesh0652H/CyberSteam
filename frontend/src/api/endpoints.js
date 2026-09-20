@@ -65,3 +65,10 @@ export const login = (credentials) => {
   });
 };
 export const getCurrentUser = () => api.get('/api/auth/me');
+
+// LLM
+export const getLlmStatus = () => api.get('/api/llm/status');
+export const getAlertSummary = (alertId) => api.get(`/api/llm/alert-summary/${alertId}`);
+
+// Assistant
+export const chatWithAssistant = (message) => api.post('/api/assistant/chat', { message });

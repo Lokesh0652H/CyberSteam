@@ -4,7 +4,7 @@ from app.db.database import engine, Base, SessionLocal
 from app.db.models import User
 from app.db.seed import seed_db
 
-from app.api import auth, dashboard, events, alerts, analytics, ips, servers, rules, system, generator, audit, reports
+from app.api import auth, dashboard, events, alerts, analytics, ips, servers, rules, system, generator, audit, reports, llm as llm_api, assistant as assistant_api
 from app.websocket import routes as ws_routes
 import contextlib
 import logging
@@ -78,6 +78,8 @@ app.include_router(generator.router)
 app.include_router(audit.router)
 app.include_router(reports.router)
 app.include_router(ws_routes.router)
+app.include_router(llm_api.router)
+app.include_router(assistant_api.router)
 
 @app.get("/")
 def root():

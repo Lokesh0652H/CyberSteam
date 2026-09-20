@@ -1,130 +1,93 @@
 import React from 'react';
-import { Menu, Bell, LogOut, ChevronDown } from 'lucide-react';
+import { AppBar, Toolbar, IconButton, Badge, Typography, ToggleButtonGroup, ToggleButton, Menu, MenuItem, Box, Avatar } from '@mui/material';
+import { Menu as MenuIcon, DarkMode, LightMode } from '@mui/icons-material';
+import { Bell, LogOut, ChevronDown } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import ConnectionStatus from '../Common/ConnectionStatus';
 
-const Header = ({ toggleSidebar, title = 'Dashboard' }) => {
-  const { logout } = useAuth() || { logout: () => {} };
-  const [showDropdown, setShowDropdown] = React.useState(false);
-  const [isLive, setIsLive] = React.useState(true);
+const Header = ({ toggleSidebar, title = 'Dashboard', isMobile }) => {
+  const { logout, user } = useAuth() || { logout: () => {} };
+  const [anchorEl, setAnchorEl] = React.useState(null);
+  const [isLive, setIsLive] = React.useState('live');
+  const [themeMode, setThemeMode] = React.useState('dark');
+
+  const handleMenu = (event) => setAnchorEl(event.currentTarget);
+  const handleClose = () => setAnchorEl(null);
+
+  const handleThemeToggle = () => {
+    const newMode = themeMode === 'dark' ? 'light' : 'dark';
+    setThemeMode(newMode);
+    alert('Theme is synced with your OS settings (prefers-color-scheme). Consider toggling OS theme.');
+  };
 
   return (
-    <header style={{
-      height: '64px',
-      background: 'var(--bg-card)',
-      borderBottom: '1px solid var(--border-primary)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      padding: '0 24px',
-      position: 'sticky',
-      top: 0,
-      zIndex: 30
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-        <button 
-          onClick={toggleSidebar}
-          className="mobile-menu-btn"
-          style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', display: 'none' }}
-        >
-          <Menu size={20} />
-        </button>
-        <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 500, color: 'var(--text-primary)' }}>
+    <AppBar position="sticky" sx={{ bgcolor: 'background.paper', backgroundImage: 'none', boxShadow: 'none', borderBottom: '1px solid', borderColor: 'divider', zIndex: (theme) => theme.zIndex.drawer - 1 }}>
+      <Toolbar sx={{ minHeight: '64px !important', px: { xs: 2, sm: 3 } }}>
+        {isMobile && (
+          <IconButton edge="start" color="inherit" aria-label="menu" onClick={toggleSidebar} sx={{ mr: 2, color: 'text.primary', display: { md: 'none' } }}>
+            <MenuIcon />
+          </IconButton>
+        )}
+        
+        <Typography variant="h6" component="h1" sx={{ flexGrow: 1, fontWeight: 500, color: 'text.primary', fontSize: '18px' }}>
           {title}
-        </h2>
-      </div>
+        </Typography>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-        {/* Live/Historical Toggle */}
-        <div style={{ 
-          display: 'flex', alignItems: 'center', background: 'var(--bg-input)', 
-          borderRadius: '20px', padding: '4px', gap: '4px'
-        }}>
-          <button 
-            onClick={() => setIsLive(true)}
-            style={{
-              padding: '4px 12px', border: 'none', borderRadius: '16px', fontSize: '12px', fontWeight: 500,
-              background: isLive ? 'var(--severity-info)' : 'transparent',
-              color: isLive ? '#fff' : 'var(--text-secondary)',
-              cursor: 'pointer', transition: 'all 0.2s'
-            }}
-          >
-            Live
-          </button>
-          <button 
-            onClick={() => setIsLive(false)}
-            style={{
-              padding: '4px 12px', border: 'none', borderRadius: '16px', fontSize: '12px', fontWeight: 500,
-              background: !isLive ? 'var(--glass-bg)' : 'transparent',
-              color: !isLive ? '#fff' : 'var(--text-secondary)',
-              cursor: 'pointer', transition: 'all 0.2s'
-            }}
-          >
-            Historical
-          </button>
-        </div>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 3 } }}>
+          <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
+            <ToggleButtonGroup
+              value={isLive}
+              exclusive
+              onChange={(e, val) => val && setIsLive(val)}
+              size="small"
+              sx={{ 
+                bgcolor: 'action.hover', p: 0.5, borderRadius: 5, 
+                '& .MuiToggleButton-root': { border: 'none', borderRadius: 4, px: 2, py: 0.5, textTransform: 'none', fontSize: 12, fontWeight: 500 }, 
+                '& .Mui-selected': { bgcolor: 'info.main', color: '#fff', '&:hover': { bgcolor: 'info.dark' } } 
+              }}
+            >
+              <ToggleButton value="live">Live</ToggleButton>
+              <ToggleButton value="historical">Historical</ToggleButton>
+            </ToggleButtonGroup>
+          </Box>
 
-        {/* Status Indicators */}
-        <div style={{ display: 'flex', gap: '12px', borderRight: '1px solid var(--border-primary)', paddingRight: '24px' }} className="status-indicators">
-          <ConnectionStatus status="CONNECTED" /> {/* Kafka */}
-        </div>
+          <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 1.5, borderRight: '1px solid', borderColor: 'divider', pr: 3 }}>
+            <ConnectionStatus status="CONNECTED" />
+          </Box>
 
-        <div style={{ position: 'relative' }}>
-          <button style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', position: 'relative' }}>
-            <Bell size={20} />
-            <span style={{ 
-              position: 'absolute', top: '-4px', right: '-4px', 
-              background: 'var(--severity-critical)', color: '#fff', 
-              fontSize: '10px', width: '16px', height: '16px', 
-              borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center'
-            }}>
-              3
-            </span>
-          </button>
-        </div>
+          <IconButton onClick={handleThemeToggle} sx={{ color: 'text.secondary' }}>
+            {themeMode === 'dark' ? <LightMode fontSize="small" /> : <DarkMode fontSize="small" />}
+          </IconButton>
 
-        <div style={{ position: 'relative' }}>
-          <button 
-            onClick={() => setShowDropdown(!showDropdown)}
-            style={{ 
-              background: 'none', border: 'none', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' 
-            }}
-          >
-            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--severity-low)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>A</div>
-            <ChevronDown size={16} color="var(--text-secondary)" />
-          </button>
-          
-          {showDropdown && (
-            <div style={{ 
-              position: 'absolute', top: '100%', right: 0, marginTop: '8px', 
-              background: 'var(--bg-card)', border: '1px solid var(--border-primary)', 
-              borderRadius: '8px', boxShadow: 'var(--glass-shadow)', minWidth: '150px', overflow: 'hidden'
-            }}>
-              <button 
-                onClick={logout}
-                style={{ 
-                  width: '100%', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '8px', 
-                  background: 'none', border: 'none', color: 'var(--severity-critical)', cursor: 'pointer',
-                  textAlign: 'left', fontSize: '14px'
-                }}
-                onMouseOver={e => e.currentTarget.style.background = 'var(--glass-bg)'}
-                onMouseOut={e => e.currentTarget.style.background = 'none'}
-              >
-                <LogOut size={16} />
-                Logout
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
+          <IconButton sx={{ color: 'text.secondary' }}>
+            <Badge badgeContent={3} color="error" sx={{ '& .MuiBadge-badge': { fontSize: 10, minWidth: 16, height: 16 } }}>
+              <Bell size={20} />
+            </Badge>
+          </IconButton>
 
-      <style>{`
-        @media (max-width: 768px) {
-          .mobile-menu-btn { display: block !important; }
-          .status-indicators { display: none !important; }
-        }
-      `}</style>
-    </header>
+          <Box>
+            <IconButton onClick={handleMenu} sx={{ p: 0.5, display: 'flex', gap: 1, borderRadius: 2 }}>
+              <Avatar sx={{ width: 32, height: 32, bgcolor: 'success.main', fontSize: 14, fontWeight: 600 }}>
+                {user?.username?.charAt(0)?.toUpperCase() || 'A'}
+              </Avatar>
+              <ChevronDown size={16} color="currentColor" style={{ opacity: 0.7 }} />
+            </IconButton>
+            <Menu
+              anchorEl={anchorEl}
+              open={Boolean(anchorEl)}
+              onClose={handleClose}
+              transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+              anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+              PaperProps={{ sx: { mt: 1, minWidth: 150, boxShadow: 'var(--glass-shadow)', border: '1px solid var(--border-primary)', bgcolor: 'background.paper' } }}
+            >
+              <MenuItem onClick={() => { handleClose(); logout(); }} sx={{ color: 'error.main', fontSize: 14, py: 1.5 }}>
+                <LogOut size={16} style={{ marginRight: 8 }} /> Logout
+              </MenuItem>
+            </Menu>
+          </Box>
+        </Box>
+      </Toolbar>
+    </AppBar>
   );
 };
 

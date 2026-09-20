@@ -1,11 +1,14 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
+import { Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Avatar, Divider, Box, Typography, IconButton } from '@mui/material';
+import { Menu as MenuIcon, SmartToy } from '@mui/icons-material';
 import { 
   Shield, LayoutDashboard, Radio, ShieldAlert, Search, 
   Globe, Server, Map, GitBranch, Activity, BookOpen, 
   FileText, BarChart3, Settings, Menu, Zap
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { motion } from 'framer-motion';
 
 const navItems = [
   { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -21,109 +24,115 @@ const navItems = [
   { path: '/rules', icon: BookOpen, label: 'Rules' },
   { path: '/audit', icon: FileText, label: 'Audit Logs' },
   { path: '/reports', icon: BarChart3, label: 'Reports' },
-  { path: '/settings', icon: Settings, label: 'Settings' }
+  { path: '/settings', icon: Settings, label: 'Settings' },
+  { path: '/assistant', icon: SmartToy, label: 'AI Assistant', isMuiIcon: true }
 ];
 
-const Sidebar = ({ isOpen, toggleSidebar }) => {
+const drawerWidth = 260;
+
+const Sidebar = ({ isOpen, toggleSidebar, isMobile }) => {
   const { user } = useAuth() || { user: { name: 'Admin', role: 'SOC Analyst' } };
 
-  return (
-    <>
-      {/* Mobile overlay */}
-      {isOpen && (
-        <div 
-          onClick={toggleSidebar}
-          style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 40,
-            display: 'block' // hide this via CSS media queries normally, but inline it's tricky.
-          }}
-          className="mobile-overlay"
-        />
-      )}
+  const drawerContent = (
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: 'background.paper' }}>
+      <Box sx={{ height: 64, display: 'flex', alignItems: 'center', px: 2.5, borderBottom: '1px solid', borderColor: 'divider', gap: 1.5 }}>
+        <Shield size={24} color="#00aaff" />
+        <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary', letterSpacing: 0.5, flex: 1 }}>
+          CyberStream
+        </Typography>
+        {isMobile && (
+          <IconButton onClick={toggleSidebar} sx={{ color: 'text.primary' }}>
+            <MenuIcon />
+          </IconButton>
+        )}
+      </Box>
 
-      <aside className={`sidebar ${isOpen ? 'open' : ''}`} style={{
-        width: '260px',
-        height: '100vh',
-        background: 'var(--bg-sidebar, #0f1219)',
-        borderRight: '1px solid var(--border-primary)',
-        display: 'flex',
-        flexDirection: 'column',
-        position: 'fixed',
-        left: 0,
-        top: 0,
-        zIndex: 50,
-        transition: 'transform 0.3s ease'
-      }}>
-        <div style={{ 
-          height: '64px', display: 'flex', alignItems: 'center', 
-          padding: '0 20px', borderBottom: '1px solid var(--border-primary)', gap: '12px'
-        }}>
-          <Shield size={24} color="var(--severity-info)" />
-          <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#fff', letterSpacing: '0.5px' }}>
-            CyberStream
-          </h1>
-          <button className="mobile-close" onClick={toggleSidebar} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#fff', display: 'none' }}>
-            <Menu size={20} />
-          </button>
-        </div>
-
-        <nav style={{ flex: 1, overflowY: 'auto', padding: '16px 0' }}>
-          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-            {navItems.map((item) => (
-              <li key={item.path} style={{ marginBottom: '4px' }}>
-                <NavLink
+      <List sx={{ flex: 1, overflowY: 'auto', py: 2, px: 1 }}>
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          return (
+            <ListItem key={item.path} disablePadding sx={{ mb: 0.5 }}>
+              <motion.div whileHover={{ scale: 1.02 }} style={{ width: '100%' }}>
+                <ListItemButton
+                  component={NavLink}
                   to={item.path}
-                  style={({ isActive }) => ({
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    padding: '10px 20px',
-                    color: isActive ? '#fff' : 'var(--text-secondary)',
-                    textDecoration: 'none',
-                    background: isActive ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
-                    borderLeft: isActive ? '3px solid var(--severity-info)' : '3px solid transparent',
-                    transition: 'all 0.2s ease',
-                    fontSize: '14px',
-                    fontWeight: isActive ? 500 : 400
-                  })}
+                  onClick={() => isMobile && toggleSidebar()}
+                  sx={{
+                    borderRadius: 1,
+                    py: 1,
+                    px: 2,
+                    '&.active': {
+                      bgcolor: 'rgba(0, 212, 255, 0.1)',
+                      borderLeft: '3px solid #00d4ff',
+                      '& .MuiListItemIcon-root': { color: '#00d4ff' },
+                      '& .MuiListItemText-primary': { color: 'text.primary', fontWeight: 500 }
+                    },
+                    '&:not(.active)': {
+                      borderLeft: '3px solid transparent',
+                      color: 'text.secondary'
+                    }
+                  }}
                 >
-                  <item.icon size={18} />
-                  {item.label}
-                </NavLink>
-              </li>
-            ))}
-          </ul>
-        </nav>
+                  <ListItemIcon sx={{ minWidth: 40, color: 'inherit' }}>
+                    {item.isMuiIcon ? <Icon fontSize="small" /> : <Icon size={18} />}
+                  </ListItemIcon>
+                  <ListItemText 
+                    primary={item.label} 
+                    primaryTypographyProps={{ fontSize: 14 }}
+                  />
+                </ListItemButton>
+              </motion.div>
+            </ListItem>
+          );
+        })}
+      </List>
 
-        <div style={{ 
-          padding: '20px', borderTop: '1px solid var(--border-primary)', 
-          display: 'flex', alignItems: 'center', gap: '12px'
-        }}>
-          <div style={{ 
-            width: '36px', height: '36px', borderRadius: '50%', 
-            background: 'var(--severity-info)', display: 'flex', 
-            alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 600
-          }}>
-            {user?.username?.charAt(0)?.toUpperCase() || 'A'}
-          </div>
-          <div>
-            <div style={{ color: '#fff', fontSize: '14px', fontWeight: 500 }}>{user?.username || 'Administrator'}</div>
-            <div style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>{typeof user?.role === 'object' ? user.role.label : (user?.role || 'Analyst')}</div>
-          </div>
-        </div>
-      </aside>
+      <Divider />
+      
+      <Box sx={{ p: 2.5, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+        <Avatar sx={{ bgcolor: 'info.main', width: 36, height: 36, fontSize: 16, fontWeight: 600 }}>
+          {user?.username?.charAt(0)?.toUpperCase() || 'A'}
+        </Avatar>
+        <Box>
+          <Typography variant="body2" sx={{ fontWeight: 500, color: 'text.primary' }}>
+            {user?.username || 'Administrator'}
+          </Typography>
+          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+            {typeof user?.role === 'object' ? user.role.label : (user?.role || 'Analyst')}
+          </Typography>
+        </Box>
+      </Box>
+    </Box>
+  );
 
-      <style>{`
-        @media (max-width: 768px) {
-          .sidebar { transform: translateX(-100%); }
-          .sidebar.open { transform: translateX(0); }
-          .mobile-close { display: block !important; }
-        }
-        @media (min-width: 769px) {
-          .mobile-overlay { display: none !important; }
-        }
-      `}</style>
-    </>
+  return (
+    <Box component="nav" sx={{ width: { md: drawerWidth }, flexShrink: { md: 0 } }}>
+      {isMobile ? (
+        <Drawer
+          variant="temporary"
+          open={isOpen}
+          onClose={toggleSidebar}
+          ModalProps={{ keepMounted: true }}
+          sx={{
+            display: { xs: 'block', md: 'none' },
+            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+          }}
+        >
+          {drawerContent}
+        </Drawer>
+      ) : (
+        <Drawer
+          variant="permanent"
+          sx={{
+            display: { xs: 'none', md: 'block' },
+            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+          }}
+          open
+        >
+          {drawerContent}
+        </Drawer>
+      )}
+    </Box>
   );
 };
 

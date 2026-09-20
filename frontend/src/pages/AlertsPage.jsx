@@ -6,7 +6,8 @@ import ErrorState from '../components/Common/ErrorState';
 import * as api from '../api/endpoints';
 import { formatDate } from '../utils/formatters';
 import { useWebSocket } from '../hooks/useWebSocket';
-import { ShieldAlert, CheckCircle2, Search, Filter, RefreshCw, AlertTriangle } from 'lucide-react';
+import { ShieldAlert, CheckCircle2, Search, Filter, RefreshCw, AlertTriangle, Bot, Sparkles, X } from 'lucide-react';
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, CircularProgress, Chip, Typography, Box, Alert } from '@mui/material';
 
 const AlertsPage = () => {
   const [stats, setStats] = useState(null);
@@ -17,6 +18,29 @@ const AlertsPage = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [filters, setFilters] = useState({ severity: '', status: '', search: '' });
   const [liveBanner, setLiveBanner] = useState(null);
+
+  // AI Summary Modal State
+  const [aiModalOpen, setAiModalOpen] = useState(false);
+  const [selectedAlert, setSelectedAlert] = useState(null);
+  const [aiSummary, setAiSummary] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState('');
+
+  const handleOpenAiSummary = async (alertItem) => {
+    setSelectedAlert(alertItem);
+    setAiModalOpen(true);
+    setAiLoading(true);
+    setAiSummary('');
+    setAiError('');
+    try {
+      const res = await api.getAlertSummary(alertItem.id);
+      setAiSummary(res.data?.summary || 'No summary returned.');
+    } catch (err) {
+      setAiError(err.response?.data?.detail || err.message || 'Failed to generate AI incident briefing.');
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   // Connect to live alerts stream
   const { data: liveAlert, status: wsStatus } = useWebSocket('ws://localhost:8000/ws/alerts');
@@ -256,6 +280,22 @@ const AlertsPage = () => {
                     </td>
                     <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                       <div style={{ display: 'inline-flex', gap: '6px' }}>
+                        <button
+                          onClick={() => handleOpenAiSummary(item)}
+                          className="btn btn-sm btn-outline"
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            background: 'rgba(0, 212, 255, 0.1)',
+                            borderColor: 'var(--accent-secondary, #00d4ff)',
+                            color: 'var(--accent-secondary, #00d4ff)'
+                          }}
+                          title="Generate AI Incident Analysis with Google Gemini"
+                        >
+                          <Bot size={13} />
+                          AI Brief
+                        </button>
                         {item.status !== 'ACKNOWLEDGED' && item.status !== 'RESOLVED' && (
                           <button
                             onClick={() => handleStatusChange(item.id, 'ACKNOWLEDGED')}
@@ -310,6 +350,81 @@ const AlertsPage = () => {
           </div>
         </div>
       </div>
+
+      {/* AI Incident Analysis Dialog */}
+      <Dialog
+        open={aiModalOpen}
+        onClose={() => setAiModalOpen(false)}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: {
+            bgcolor: '#0c1018',
+            color: '#e8edf5',
+            border: '1px solid rgba(0, 212, 255, 0.25)',
+            boxShadow: '0 0 30px rgba(0, 212, 255, 0.15)',
+            borderRadius: 3
+          }
+        }}
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Box sx={{ p: 1, borderRadius: 2, bgcolor: 'rgba(0, 212, 255, 0.15)', color: '#00d4ff', display: 'flex' }}>
+              <Sparkles size={20} />
+            </Box>
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '1.1rem', color: '#fff' }}>
+                AI Incident Briefing: {selectedAlert?.alert_id}
+              </Typography>
+              <Typography variant="caption" sx={{ color: '#8b95a8' }}>
+                {selectedAlert?.rule_name} • Attacker IP: <span style={{ color: '#00ff88' }}>{selectedAlert?.source_ip}</span>
+              </Typography>
+            </Box>
+          </Box>
+          <Button onClick={() => setAiModalOpen(false)} sx={{ minWidth: 0, p: 1, color: '#8b95a8' }}>
+            <X size={18} />
+          </Button>
+        </DialogTitle>
+
+        <DialogContent sx={{ py: 3, px: 3 }}>
+          {aiLoading ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', py: 6, gap: 2 }}>
+              <CircularProgress sx={{ color: '#00d4ff' }} size={42} />
+              <Typography variant="body2" sx={{ color: '#8b95a8', fontWeight: 500 }}>
+                Querying Google Gemini 2.5 Flash for forensic correlation...
+              </Typography>
+            </Box>
+          ) : aiError ? (
+            <Alert severity="error" sx={{ bgcolor: 'rgba(239, 68, 68, 0.1)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+              {aiError}
+            </Alert>
+          ) : (
+            <Box sx={{
+              fontFamily: "'Space Grotesk', system-ui, sans-serif",
+              whiteSpace: 'pre-wrap',
+              lineHeight: 1.7,
+              fontSize: '0.9rem',
+              color: '#d1d5db',
+              bgcolor: 'rgba(0,0,0,0.3)',
+              p: 2.5,
+              borderRadius: 2,
+              border: '1px solid rgba(255,255,255,0.04)'
+            }}>
+              {aiSummary}
+            </Box>
+          )}
+        </DialogContent>
+
+        <DialogActions sx={{ px: 3, pb: 2.5, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+          <Button
+            variant="outlined"
+            onClick={() => setAiModalOpen(false)}
+            sx={{ borderColor: 'rgba(255,255,255,0.15)', color: '#e8edf5', textTransform: 'none' }}
+          >
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 };
