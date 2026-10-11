@@ -1,0 +1,19 @@
+# Local environment files
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Dependencies and generated build artifacts
+**/node_modules/
+**/build/
+**/dist/
+**/__pycache__/
+**/*.py[cod]
+
+# Generated BDA data and charts
+data/bda/input/*.csv
+data/bda/results/*.csv
+data/bda/results/*.png

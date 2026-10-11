@@ -1,0 +1,40 @@
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #080B10;
+  --card: #0F1522;
+  --elevated: #141C2E;
+  --border: #1E293B;
+  --border-accent: #1E3A5F;
+  --cyan: #06B6D4;
+}
+
+* { border-color: var(--border); }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: #F8FAFC;
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,h2,h3,h4,.font-head { font-family: 'Barlow Condensed', sans-serif; }
+.font-mono, code { font-family: 'JetBrains Mono', monospace; }
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: #0B0F16; }
+::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #2A3F5F; }
+
+.cs-card { background: var(--card); border: 1px solid var(--border); border-radius: 3px; }
+.cs-card:hover { border-color: #2A3F5F; }
+@keyframes pulseDot { 0%,100%{opacity:1} 50%{opacity:.3} }
+.pulse-dot { animation: pulseDot 1.6s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse-dot { animation: none; }
+}
