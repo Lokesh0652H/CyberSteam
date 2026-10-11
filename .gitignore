@@ -14,6 +14,7 @@
 **/*.py[cod]
 
 # Generated BDA data and charts
+data/events/
 data/bda/input/*.csv
 data/bda/results/*.csv
 data/bda/results/*.png

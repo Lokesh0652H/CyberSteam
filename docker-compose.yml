@@ -1,0 +1,183 @@
+# CyberStream: Kafka -> Spark -> HDFS -> HiveQL -> RStudio + SOC dashboard.
+# The full stack is resource intensive; allow roughly 8 GB RAM for local development.
+
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.1
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.1
+    depends_on: [zookeeper]
+    ports: ["9092:9092"]
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+
+  kafka-init:
+    image: confluentinc/cp-kafka:7.6.1
+    depends_on: [kafka]
+    entrypoint: ["/bin/sh", "-c"]
+    command: >-
+      set -e;
+      until kafka-topics --bootstrap-server kafka:29092 --list >/dev/null 2>&1; do sleep 2; done;
+      kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic cyber-events --partitions 6 --replication-factor 1 &&
+      kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic normalized-events --partitions 6 --replication-factor 1 &&
+      kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic security-alerts --partitions 3 --replication-factor 1 &&
+      kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic system-events --partitions 1 --replication-factor 1
+
+  mongo:
+    image: mongo:7
+    ports: ["27017:27017"]
+    volumes: ["mongodata:/data/db"]
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: cyberstream
+      POSTGRES_PASSWORD: cyberstream
+      POSTGRES_DB: cyberstream
+    ports: ["5432:5432"]
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+
+  namenode:
+    image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
+    container_name: cyberstream-namenode
+    environment:
+      CLUSTER_NAME: cyberstream
+      CORE_CONF_fs_defaultFS: hdfs://namenode:9000
+      HDFS_CONF_dfs_replication: "1"
+    ports: ["9870:9870", "9000:9000"]
+    volumes: ["hdfs_namenode:/hadoop/dfs/name"]
+    restart: unless-stopped
+
+  datanode:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+    container_name: cyberstream-datanode
+    depends_on: [namenode]
+    environment:
+      SERVICE_PRECONDITION: "namenode:9870"
+      CORE_CONF_fs_defaultFS: hdfs://namenode:9000
+      HDFS_CONF_dfs_replication: "1"
+      HDFS_CONF_dfs_datanode_use_datanode_hostname: "true"
+    ports: ["9864:9864"]
+    volumes: ["hdfs_datanode:/hadoop/dfs/data"]
+    restart: unless-stopped
+
+  hdfs-init:
+    image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
+    depends_on:
+      namenode:
+        condition: service_healthy
+      datanode:
+        condition: service_healthy
+    environment:
+      CORE_CONF_fs_defaultFS: hdfs://namenode:9000
+    volumes:
+      - ./bda/hive/conf/core-site.xml:/etc/hadoop/core-site.xml:ro
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - "set -e; hdfs dfs -mkdir -p /tmp/hive /user/hive/warehouse /user/cyberstream; hdfs dfs -chmod -R 777 /tmp/hive /user/hive /user/cyberstream"
+
+  hive:
+    image: apache/hive:4.0.0
+    container_name: cyberstream-hive
+    depends_on:
+      hdfs-init:
+        condition: service_completed_successfully
+    environment:
+      SERVICE_NAME: hiveserver2
+      HIVE_CUSTOM_CONF_DIR: /hive_custom_conf
+    ports: ["10000:10000", "10002:10002"]
+    volumes:
+      - ./bda/hive/conf:/hive_custom_conf:ro
+      - hive_metastore:/opt/hive/data
+      - ./bda:/opt/bda:ro
+    restart: unless-stopped
+
+  spark:
+    build:
+      context: .
+      dockerfile: docker/spark/Dockerfile
+    depends_on:
+      kafka:
+        condition: service_started
+      postgres:
+        condition: service_started
+      hdfs-init:
+        condition: service_completed_successfully
+    environment:
+      KAFKA_BROKER: kafka:29092
+      DATABASE_URL: postgresql://cyberstream:cyberstream@postgres:5432/cyberstream
+      HDFS_URL: hdfs://namenode:9000/user/cyberstream/events/stream
+      BATCH_HDFS_URL: hdfs://namenode:9000/user/cyberstream/events/batch
+      CHECKPOINT_URL: hdfs://namenode:9000/user/cyberstream/checkpoints/streaming
+    volumes: ["./streaming:/opt/streaming", "./data:/data", "./bda:/opt/bda:ro"]
+    command: ["/opt/streaming/spark/submit.sh"]
+    restart: unless-stopped
+
+  producer:
+    build:
+      context: .
+      dockerfile: docker/streaming/Dockerfile
+    depends_on: [kafka]
+    environment:
+      KAFKA_BROKER: kafka:29092
+      EVENT_RATE: "50"
+    command: ["python", "-m", "producers.producer"]
+    volumes: ["./streaming:/app/streaming", "./data:/data"]
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+    depends_on: [mongo, kafka]
+    ports: ["8001:8001"]
+    environment:
+      MONGO_URL: mongodb://mongo:27017
+      DB_NAME: cyberstream
+      DATABASE_URL: postgresql://cyberstream:cyberstream@postgres:5432/cyberstream
+      KAFKA_BROKER: kafka:29092
+      JWT_SECRET: local-dev-secret-change-me
+      ADMIN_EMAIL: admin@cyberstream.io
+      ADMIN_PASSWORD: admin123
+      HDFS_URL: file:///data/events
+      CORS_ORIGINS: "*"
+    volumes: ["./data:/data"]
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend/Dockerfile
+    depends_on: [backend]
+    ports: ["3000:3000"]
+    environment:
+      REACT_APP_BACKEND_URL: http://localhost:8001
+
+  rstudio:
+    image: rocker/rstudio:4.4.2
+    container_name: cyberstream-rstudio
+    depends_on: [hive]
+    profiles: ["bda"]
+    environment:
+      PASSWORD: ${RSTUDIO_PASSWORD:-cyberstream}
+    ports: ["127.0.0.1:8787:8787"]
+    volumes:
+      - ./bda/rstudio:/home/rstudio/bda:ro
+      - ./data/bda/results:/home/rstudio/results
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  mongodata:
+  hdfs_namenode:
+  hdfs_datanode:
+  hive_metastore:
